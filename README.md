@@ -310,20 +310,35 @@ flowchart TD
 
 ## 📦 Monorepo Package Breakdown
 
-```
+```text
 opskil/
+├── .agents/
+│   └── AGENTS.md                      # Engineering Constitution & AI Operating Manual
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                     # Continuous integration: typecheck, lint, test, admin build
 │       └── build-artifacts.yml        # Multi-platform packaging: APK, IPA, and Admin web distribution
+├── .maestro/
+│   ├── organizer_roster_flow.yaml     # Maestro UI automation for Organizer roster flow
+│   └── worker_discovery_flow.yaml     # Maestro UI automation for Worker shift discovery
+├── .vscode/
+│   ├── extensions.json                # Recommended workspace VSCode extensions
+│   └── settings.json                  # Editor formatting, linting & TypeScript settings
+├── .dockerignore                      # Docker context ignore rules
+├── .env.example                       # Client vs server environment variable specification
+├── .env.docker.test.example           # Docker testing environment template
+├── .env.production.template           # Production deployment secret manifest
+├── .gitignore                         # Git repository ignore rules
+├── .npmrc                             # NPM package management configuration
+├── .yarnrc.yml                        # Yarn modern configuration
 ├── apps/
-│   ├── worker/                        # Opskl Worker Mobile App (React Native, Expo SDK 57, Expo Router)
+│   ├── worker/                        # Opskl Worker Mobile App (React Native, Expo SDK 57/58, Expo Router)
 │   │   ├── app/                       # File-based routes ((tabs), shift/[id], profile, earnings, kyc)
 │   │   ├── assets/images/             # Branding assets (icon.png, splash-icon.png, adaptive icons)
 │   │   ├── app.json                   # com.opskil.worker, scheme: opskil-worker
 │   │   ├── eas.json                   # EAS build profiles (development, preview, preview-simulator, prod)
 │   │   └── package.json
-│   ├── organizer/                     # Opskl Organizer Mobile App (React Native, Expo SDK 57, Expo Router)
+│   ├── organizer/                     # Opskl Organizer Mobile App (React Native, Expo SDK 57/58, Expo Router)
 │   │   ├── app/                       # File-based routes ((tabs), create, roster, attendance, kyc)
 │   │   ├── assets/images/             # Branding assets (icon.png, splash-icon.png, adaptive icons)
 │   │   ├── app.json                   # com.opskil.organizer, scheme: opskil-organizer
@@ -340,13 +355,25 @@ opskil/
 │   │   ├── src/supabase/              # Safe RPC bindings (jobs, applications, bookings, attendance)
 │   │   ├── src/formatters/            # INR currency (₹), IST time formatting, Mumbai zones
 │   │   └── src/__tests__/             # Adversarial, concurrency, and platform test suites (26 suites)
-│   └── validation/                    # Zod runtime validation schemas
-│       └── src/schemas/               # GSTIN, UPI ID, Shift Creation, and Mobile Auth schemas
+│   ├── validation/                    # Zod runtime validation schemas
+│   │   └── src/schemas/               # GSTIN, UPI ID, Shift Creation, and Mobile Auth schemas
+│   └── config/                        # Shared workspace TypeScript & build configs
 ├── supabase/
 │   ├── migrations/                    # Version-controlled PostgreSQL migrations (20261012.. to 20261015..)
+│   ├── functions/                     # Supabase Edge Functions (webhooks, notifications, cleanup)
+│   ├── config.toml                    # Local Supabase CLI configuration
 │   └── full_schema_release.sql        # Rebuilt consolidated zero-demo database schema
+├── docker/                            # Docker containerization, compose, and test environments
 ├── docs/                              # Playbooks for App Store, security, payments, and pilot testing
 ├── scripts/                           # Database migration, verification, screenshot, and notification tools
+├── screenshots/                       # High-resolution application screenshots & UI flows
+├── Design/                            # Stitch design specifications, UI prototypes & screen inventory
+├── OPSKL_REVIEW_REPORT.md             # Platform architecture review & marketplace gap analysis
+├── PROJECT_RUNBOOK.md                 # Master operations & engineering runbook
+├── Verification.md                    # Adversarial verification & audit report
+├── tsconfig.base.json                 # Monorepo base TypeScript compiler configuration
+├── tsconfig.json                      # Root TypeScript configuration
+├── package-lock.json                  # Locked dependency graph
 └── package.json                       # Monorepo workspaces and script orchestration
 ```
 
