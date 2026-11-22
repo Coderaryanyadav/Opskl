@@ -43,6 +43,13 @@ describe('Opskl Validation Schemas', () => {
   });
 
   test('validates complete shift payload', () => {
+    const futureDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+
     const valid = {
       title: 'Registration Desk & Usher',
       category: 'exhibition',
@@ -50,7 +57,7 @@ describe('Opskl Validation Schemas', () => {
       venueAddress: 'Western Express Highway, Goregaon East, Mumbai 400063',
       city: 'Mumbai',
       zone: 'Goregaon East',
-      date: '2026-11-20',
+      date: futureDate,
       startTime: '09:00',
       endTime: '17:00',
       durationHours: 8,

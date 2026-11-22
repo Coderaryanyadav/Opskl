@@ -77,6 +77,13 @@ describe('🔥 BRUTAL PLATFORM LAUNCH-READINESS VERIFICATION SUITE', () => {
   // ==========================================
   describe('2. Brutal Living Wage & Escrow Enforcements', () => {
     test('Schema validation rejects shift with hourlyRate below ₹100/hr floor', () => {
+      const futureDate = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+
       const subWagePayload = {
         title: 'Exploitative Shift',
         category: 'exhibition' as const,
@@ -84,7 +91,7 @@ describe('🔥 BRUTAL PLATFORM LAUNCH-READINESS VERIFICATION SUITE', () => {
         venueAddress: 'Western Express Highway, Goregaon East, Mumbai',
         city: 'Mumbai',
         zone: 'Goregaon East',
-        date: '2026-11-01',
+        date: futureDate,
         startTime: '09:00',
         endTime: '17:00',
         durationHours: 8,
@@ -100,6 +107,13 @@ describe('🔥 BRUTAL PLATFORM LAUNCH-READINESS VERIFICATION SUITE', () => {
     });
 
     test('Calculates and guarantees 100% upfront escrow locking for compliant shift', async () => {
+      const futureDate = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+
       const compliantPayload = {
         title: 'VIP Usher - Tech Summit',
         category: 'conference' as const,
@@ -107,7 +121,7 @@ describe('🔥 BRUTAL PLATFORM LAUNCH-READINESS VERIFICATION SUITE', () => {
         venueAddress: 'Bandra Kurla Complex, Bandra East, Mumbai',
         city: 'Mumbai',
         zone: 'BKC',
-        date: '2026-11-01',
+        date: futureDate,
         startTime: '09:00',
         endTime: '17:00',
         durationHours: 8,

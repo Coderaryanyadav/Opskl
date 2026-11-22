@@ -116,6 +116,13 @@ describe("E2E Lifecycle: Scenarios A, B, C, & D", () => {
     });
 
     test("4. Creates and publishes a real shift using validated schema", async () => {
+      const futureDate = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+
       const shiftPayload = {
         title: "VIP Delegate Registration Host",
         category: "conference" as const,
@@ -123,7 +130,7 @@ describe("E2E Lifecycle: Scenarios A, B, C, & D", () => {
         venueAddress: "G Block BKC, Bandra Kurla Complex, Mumbai 400051",
         city: "Mumbai",
         zone: "Bandra Kurla Complex (BKC)",
-        date: "2026-11-20",
+        date: futureDate,
         startTime: "08:30",
         endTime: "17:30",
         durationHours: 9,
@@ -499,6 +506,13 @@ describe("E2E Lifecycle: Scenarios A, B, C, & D", () => {
     });
 
     test("4. Sub-minimum living wage rejected (< ₹100/hr)", () => {
+      const futureDate = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+
       const invalidShift = {
         title: "Event Helper Below Minimum Wage",
         category: "conference",
@@ -506,7 +520,7 @@ describe("E2E Lifecycle: Scenarios A, B, C, & D", () => {
         venueAddress: "Address",
         city: "Mumbai",
         zone: "Bandra Kurla Complex (BKC)",
-        date: "2026-11-20",
+        date: futureDate,
         startTime: "09:00",
         endTime: "17:00",
         durationHours: 8,

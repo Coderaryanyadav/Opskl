@@ -12,8 +12,8 @@
 import { createClient } from '@supabase/supabase-js';
 import pg from 'pg';
 
-const url = process.env.SUPABASE_URL || process.env.TEST_API_URL;
-const anonKey = process.env.SUPABASE_ANON_KEY;
+const url = process.env.SUPABASE_URL || process.env.TEST_API_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
+const anonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!url || !anonKey || !serviceKey) {
@@ -45,12 +45,26 @@ const accounts = {
     fullName: 'Docker Test Worker',
     phone: '9000000101',
   },
+  worker2: {
+    email: process.env.WORKER2_EMAIL || 'worker2@test.opskil.local',
+    password: process.env.WORKER2_PASSWORD || 'OpsklTestWorker2!2026',
+    role: 'worker',
+    fullName: 'Docker Test Worker Two',
+    phone: '9000000105',
+  },
   organizer: {
     email: process.env.ORGANIZER_EMAIL || 'organizer@test.opskil.local',
     password: process.env.ORGANIZER_PASSWORD || 'OpsklTestOrganizer!2026',
     role: 'organizer',
     fullName: 'Docker Test Events',
     phone: '9000000102',
+  },
+  organizer2: {
+    email: process.env.ORGANIZER2_EMAIL || 'organizer2@test.opskil.local',
+    password: process.env.ORGANIZER2_PASSWORD || 'OpsklTestOrganizer2!2026',
+    role: 'organizer',
+    fullName: 'Docker Test Events Two',
+    phone: '9000000106',
   },
 };
 
@@ -165,7 +179,9 @@ async function main() {
 
   const adminId = await createAccount(accounts.admin);
   const workerId = await createAccount(accounts.worker);
+  const worker2Id = await createAccount(accounts.worker2);
   const organizerId = await createAccount(accounts.organizer);
+  const organizer2Id = await createAccount(accounts.organizer2);
 
   // The auth trigger deliberately converts admin metadata to worker.
   // Promotion is performed with the local service-role key, never by a client.
@@ -179,7 +195,9 @@ async function main() {
 
   const admin = await signIn(accounts.admin);
   const worker = await signIn(accounts.worker);
+  const worker2 = await signIn(accounts.worker2);
   const organizer = await signIn(accounts.organizer);
+  const organizer2 = await signIn(accounts.organizer2);
 
   const { error: workerProfileError } = await worker
     .from('worker_profiles')
@@ -192,6 +210,18 @@ async function main() {
     })
     .eq('id', workerId);
   if (workerProfileError) fail('worker profile onboarding', workerProfileError);
+
+  const { error: worker2ProfileError } = await worker2
+    .from('worker_profiles')
+    .update({
+      preferred_locality: 'BKC',
+      skills: ['registration', 'concierge'],
+      availability_status: 'available',
+      profile_completion_status: 'completed',
+      upi_id: 'dockerworker2@upi',
+    })
+    .eq('id', worker2Id);
+  if (worker2ProfileError) fail('worker2 profile onboarding', worker2ProfileError);
 
   const { error: organizerProfileError } = await organizer
     .from('organizer_profiles')
@@ -207,17 +237,43 @@ async function main() {
     .eq('id', organizerId);
   if (organizerProfileError) fail('organizer profile onboarding', organizerProfileError);
 
+  const { error: organizer2ProfileError } = await organizer2
+    .from('organizer_profiles')
+    .update({
+      business_name: 'Docker Test Events Two Pvt Ltd',
+      business_type: 'event_agency',
+      business_contact_phone: accounts.organizer2.phone,
+      business_contact_email: accounts.organizer2.email,
+      billing_address: 'Andheri, Mumbai',
+      gstin: '27BBBBB0000B1Z5',
+      profile_completion_status: 'completed',
+    })
+    .eq('id', organizer2Id);
+  if (organizer2ProfileError) fail('organizer2 profile onboarding', organizer2ProfileError);
+
   const { data: workerCase, error: workerCaseError } = await worker
     .from('verification_cases')
     .insert({
       profile_id: workerId,
       document_type: 'aadhaar',
       document_masked_id: 'XXXX-XXXX-1234',
-      document_storage_path: 'test/worker-aadhaar.pdf',
+      document_storage_path: `${workerId}/aadhaar.pdf`,
     })
     .select('id')
     .single();
   if (workerCaseError) fail('worker KYC insert', workerCaseError);
+
+  const { data: worker2Case, error: worker2CaseError } = await worker2
+    .from('verification_cases')
+    .insert({
+      profile_id: worker2Id,
+      document_type: 'aadhaar',
+      document_masked_id: 'XXXX-XXXX-5678',
+      document_storage_path: `${worker2Id}/aadhaar.pdf`,
+    })
+    .select('id')
+    .single();
+  if (worker2CaseError) fail('worker2 KYC insert', worker2CaseError);
 
   const { data: orgCase, error: orgCaseError } = await organizer
     .from('verification_cases')
@@ -225,13 +281,25 @@ async function main() {
       profile_id: organizerId,
       document_type: 'gstin',
       document_masked_id: '27AAAAA0000A1Z5',
-      document_storage_path: 'test/org-gstin.pdf',
+      document_storage_path: `${organizerId}/gstin.pdf`,
     })
     .select('id')
     .single();
   if (orgCaseError) fail('organizer KYC insert', orgCaseError);
 
-  for (const caseId of [workerCase.id, orgCase.id]) {
+  const { data: org2Case, error: org2CaseError } = await organizer2
+    .from('verification_cases')
+    .insert({
+      profile_id: organizer2Id,
+      document_type: 'gstin',
+      document_masked_id: '27BBBBB0000B1Z5',
+      document_storage_path: `${organizer2Id}/gstin.pdf`,
+    })
+    .select('id')
+    .single();
+  if (org2CaseError) fail('organizer2 KYC insert', org2CaseError);
+
+  for (const caseId of [workerCase.id, worker2Case.id, orgCase.id, org2Case.id]) {
     const { data, error } = await admin.rpc('admin_verify_case_safe', {
       p_case_id: caseId,
       p_status: 'approved',
@@ -296,13 +364,17 @@ async function main() {
       accounts: {
         admin: accounts.admin.email,
         worker: accounts.worker.email,
+        worker2: accounts.worker2.email,
         organizer: accounts.organizer.email,
+        organizer2: accounts.organizer2.email,
       },
       jobId: job.job_id,
       discoveryJobId: discoveryJob.job_id,
       applicationId: application.application_id,
       workerCaseId: workerCase.id,
+      worker2CaseId: worker2Case.id,
       organizerCaseId: orgCase.id,
+      organizer2CaseId: org2Case.id,
     })
   );
 }

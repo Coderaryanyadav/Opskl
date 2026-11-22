@@ -18,6 +18,8 @@ if (target.protocol !== 'http:') {
 }
 
 const server = http.createServer((req, res) => {
+  req.on('error', () => {});
+  res.on('error', () => {});
   const headers = { ...req.headers, host: target.host };
   const proxyReq = http.request(
     {
@@ -29,6 +31,7 @@ const server = http.createServer((req, res) => {
       timeout: 30000,
     },
     (proxyRes) => {
+      proxyRes.on('error', () => {});
       res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
       proxyRes.pipe(res);
     }
@@ -46,6 +49,7 @@ const server = http.createServer((req, res) => {
 // Basic websocket upgrade forwarding for realtime checks. The UI suite does not
 // assert realtime delivery, but this keeps the browser from silently failing.
 server.on('upgrade', (req, socket, head) => {
+  socket.on('error', () => socket.destroy());
   const proxyReq = http.request({
     hostname: target.hostname,
     port: target.port || 80,
@@ -54,6 +58,10 @@ server.on('upgrade', (req, socket, head) => {
     headers: { ...req.headers, host: target.host },
   });
   proxyReq.on('upgrade', (proxyRes, proxySocket, proxyHead) => {
+    proxySocket.on('error', () => {
+      proxySocket.destroy();
+      socket.destroy();
+    });
     socket.write(
       `HTTP/1.1 101 Switching Protocols\r\n${Object.entries(proxyRes.headers)
         .map(([k, v]) => `${k}: ${v}`)
@@ -66,6 +74,14 @@ server.on('upgrade', (req, socket, head) => {
   });
   proxyReq.on('error', () => socket.destroy());
   proxyReq.end();
+});
+
+process.on('uncaughtException', (err) => {
+  if (err?.code === 'ECONNRESET' || err?.code === 'EPIPE' || err?.code === 'ERR_STREAM_PREMATURE_CLOSE') {
+    // Expected client teardown during browser route transitions
+    return;
+  }
+  console.error('[browser-proxy uncaught]', err);
 });
 
 server.listen(listenPort, '127.0.0.1', () => {

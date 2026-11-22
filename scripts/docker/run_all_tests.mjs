@@ -109,6 +109,20 @@ async function main() {
       return;
     }
 
+    const secCode = await runScript('security-adversarial', 'scripts/docker/test_security_adversarial.mjs');
+    if (secCode !== 0) {
+      writeSummary({ abortReason: 'security adversarial failed' });
+      process.exitCode = 1;
+      return;
+    }
+
+    const wfCode = await runScript('workflow-adversarial', 'scripts/docker/test_workflow_adversarial.mjs');
+    if (wfCode !== 0) {
+      writeSummary({ abortReason: 'workflow adversarial failed' });
+      process.exitCode = 1;
+      return;
+    }
+
     const apiCode = await runScript('api-rpc-rls', 'scripts/docker/test_api_workflow.mjs');
     if (apiCode !== 0) {
       writeSummary({ abortReason: 'API/RLS workflow failed' });
