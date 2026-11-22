@@ -1,4 +1,4 @@
-name: Build Mobile Apps (APK/IPA) & Admin Console
+name: Build Mobile Apps (APK/IPA) & Release
 
 on:
   workflow_dispatch:
@@ -40,24 +40,61 @@ on:
         options:
           - 'local'
           - 'eas-cloud'
+      publish_release:
+        description: 'Publish as GitHub Release'
+        required: false
+        default: false
+        type: boolean
   push:
     tags:
       - 'v*'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  # -------------------------------------------------------------
+  # 0. Quality Gate: Verify Monorepo Before Packaging
+  # -------------------------------------------------------------
+  verify-quality-gate:
+    name: Verify Types, Tests & Static Invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Check TypeScript Compilation
+        run: npm run typecheck
+
+      - name: Run Test Suites
+        run: npm test
+
+      - name: Verify SQL Migration Invariants
+        run: npm run test:sql
+
   # -------------------------------------------------------------
   # 1. Opskl Worker Android APK
   # -------------------------------------------------------------
   build-worker-android:
     name: Worker App — Android (APK/AAB)
+    needs: [verify-quality-gate]
     if: |
-      (github.event_name == 'push') ||
+      always() &&
+      (needs.verify-quality-gate.result == 'success') &&
+      ((github.event_name == 'push') ||
       (inputs.app == 'all' || inputs.app == 'worker') &&
       (inputs.platform == 'all' || inputs.platform == 'android') &&
-      (inputs.build_mode == 'local')
+      (inputs.build_mode == 'local' || inputs.build_mode == null))
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -111,11 +148,14 @@ jobs:
   # -------------------------------------------------------------
   build-organizer-android:
     name: Organizer (User) App — Android (APK/AAB)
+    needs: [verify-quality-gate]
     if: |
-      (github.event_name == 'push') ||
+      always() &&
+      (needs.verify-quality-gate.result == 'success') &&
+      ((github.event_name == 'push') ||
       (inputs.app == 'all' || inputs.app == 'organizer') &&
       (inputs.platform == 'all' || inputs.platform == 'android') &&
-      (inputs.build_mode == 'local')
+      (inputs.build_mode == 'local' || inputs.build_mode == null))
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -169,11 +209,14 @@ jobs:
   # -------------------------------------------------------------
   build-worker-ios:
     name: Worker App — iOS (IPA/Simulator)
+    needs: [verify-quality-gate]
     if: |
-      (github.event_name == 'push') ||
+      always() &&
+      (needs.verify-quality-gate.result == 'success') &&
+      ((github.event_name == 'push') ||
       (inputs.app == 'all' || inputs.app == 'worker') &&
       (inputs.platform == 'all' || inputs.platform == 'ios') &&
-      (inputs.build_mode == 'local')
+      (inputs.build_mode == 'local' || inputs.build_mode == null))
     runs-on: macos-14
     timeout-minutes: 60
 
@@ -218,11 +261,14 @@ jobs:
   # -------------------------------------------------------------
   build-organizer-ios:
     name: Organizer (User) App — iOS (IPA/Simulator)
+    needs: [verify-quality-gate]
     if: |
-      (github.event_name == 'push') ||
+      always() &&
+      (needs.verify-quality-gate.result == 'success') &&
+      ((github.event_name == 'push') ||
       (inputs.app == 'all' || inputs.app == 'organizer') &&
       (inputs.platform == 'all' || inputs.platform == 'ios') &&
-      (inputs.build_mode == 'local')
+      (inputs.build_mode == 'local' || inputs.build_mode == null))
     runs-on: macos-14
     timeout-minutes: 60
 
@@ -267,10 +313,13 @@ jobs:
   # -------------------------------------------------------------
   build-admin-web:
     name: Admin Console — Web Distribution Bundle
+    needs: [verify-quality-gate]
     if: |
-      (github.event_name == 'push') ||
+      always() &&
+      (needs.verify-quality-gate.result == 'success') &&
+      ((github.event_name == 'push') ||
       (inputs.app == 'all' || inputs.app == 'admin') &&
-      (inputs.platform == 'all' || inputs.platform == 'web')
+      (inputs.platform == 'all' || inputs.platform == 'web'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -308,43 +357,41 @@ jobs:
           retention-days: 30
 
   # -------------------------------------------------------------
-  # 6. EAS Cloud Build (Optional - when EXPO_TOKEN is provided)
+  # 6. Publish Official GitHub Release & Attach Artifacts
   # -------------------------------------------------------------
-  eas-cloud-build:
-    name: EAS Cloud Build (Worker & Organizer)
-    if: inputs.build_mode == 'eas-cloud'
+  publish-release:
+    name: Package & Publish GitHub Release 1.0.0
+    needs:
+      - build-worker-android
+      - build-organizer-android
+      - build-worker-ios
+      - build-organizer-ios
+      - build-admin-web
+    if: always() && (startsWith(github.ref, 'refs/tags/v') || inputs.publish_release == true)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
         with:
-          node-version: 22
-          cache: npm
+          path: release-artifacts
 
-      - name: Setup EAS CLI
-        uses: expo/expo-github-action@v8
+      - name: Consolidate Release Assets
+        run: |
+          mkdir -p release-dist
+          find release-artifacts -type f \( -name "*.apk" -o -name "*.aab" -o -name "*.tar.gz" -o -name "*.ipa" \) -exec cp {} release-dist/ \;
+          ls -la release-dist
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Trigger EAS Cloud Build for Worker
-        if: inputs.app == 'all' || inputs.app == 'worker'
-        run: |
-          cd apps/worker
-          PLATFORM="${{ inputs.platform == 'all' && 'all' || inputs.platform }}"
-          PROFILE="${{ inputs.profile || 'preview' }}"
-          eas build --platform "$PLATFORM" --profile "$PROFILE" --non-interactive
-
-      - name: Trigger EAS Cloud Build for Organizer
-        if: inputs.app == 'all' || inputs.app == 'organizer'
-        run: |
-          cd apps/organizer
-          PLATFORM="${{ inputs.platform == 'all' && 'all' || inputs.platform }}"
-          PROFILE="${{ inputs.profile || 'preview' }}"
-          eas build --platform "$PLATFORM" --profile "$PROFILE" --non-interactive
+          tag_name: ${{ github.ref_name || 'v1.0.0' }}
+          name: Opskl ${{ github.ref_name || 'v1.0.0' }} — Production Release
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: release-dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

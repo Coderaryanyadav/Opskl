@@ -36,6 +36,12 @@ ios/build/
 
 # Production
 build/
+*.tar.gz
+*.apk
+*.aab
+*.ipa
+release-dist/
+release-artifacts/
 
 # Environment files
 .env
