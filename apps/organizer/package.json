@@ -7,6 +7,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build:apk": "eas build --platform android --profile preview",
+    "build:ipa": "eas build --platform ios --profile preview",
+    "build:simulator": "eas build --platform ios --profile preview-simulator",
     "typecheck": "tsc --noEmit",
     "test": "jest"
   },
